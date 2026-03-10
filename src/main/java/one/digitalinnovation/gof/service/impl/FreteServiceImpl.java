@@ -1,6 +1,7 @@
 package one.digitalinnovation.gof.service.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import one.digitalinnovation.gof.model.Endereco;
@@ -8,16 +9,18 @@ import one.digitalinnovation.gof.model.dto.FreteRequestDto;
 import one.digitalinnovation.gof.model.dto.FreteResponseDto;
 import one.digitalinnovation.gof.service.FreteService;
 import one.digitalinnovation.gof.service.ViaCepService;
+import one.digitalinnovation.gof.service.strategy.CalculadoraFreteStrategy;
 
 @Service
 public class FreteServiceImpl implements FreteService {
 
-	private static final double VALOR_MESMA_CIDADE = 10.0;
-	private static final double VALOR_MESMO_ESTADO = 20.0;
-	private static final double VALOR_OUTRO_ESTADO = 40.0;
+	private final ViaCepService viaCepService;
+	private final List<CalculadoraFreteStrategy> calculadorasFrete;
 
-	@Autowired
-	private ViaCepService viaCepService;
+	public FreteServiceImpl(ViaCepService viaCepService, List<CalculadoraFreteStrategy> calculadorasFrete) {
+		this.viaCepService = viaCepService;
+		this.calculadorasFrete = calculadorasFrete;
+	}
 
 	@Override
 	public FreteResponseDto calcularFrete(FreteRequestDto request) {
@@ -31,19 +34,17 @@ public class FreteServiceImpl implements FreteService {
 		response.setCidadeDestino(destino.getLocalidade());
 		response.setUfOrigem(origem.getUf());
 		response.setUfDestino(destino.getUf());
-
-		if (origem.getUf().equalsIgnoreCase(destino.getUf())
-				&& origem.getLocalidade().equalsIgnoreCase(destino.getLocalidade())) {
-			response.setTipoFrete("MESMA_CIDADE");
-			response.setValorFrete(VALOR_MESMA_CIDADE);
-		} else if (origem.getUf().equalsIgnoreCase(destino.getUf())) {
-			response.setTipoFrete("MESMO_ESTADO");
-			response.setValorFrete(VALOR_MESMO_ESTADO);
-		} else {
-			response.setTipoFrete("OUTRO_ESTADO");
-			response.setValorFrete(VALOR_OUTRO_ESTADO);
-		}
+		CalculadoraFreteStrategy calculadora = calcularFrete(origem, destino);
+		response.setTipoFrete(calculadora.getTipoFrete());
+		response.setValorFrete(calculadora.calcularValor());
 
 		return response;
+	}
+
+	private CalculadoraFreteStrategy calcularFrete(Endereco origem, Endereco destino) {
+		return calculadorasFrete.stream()
+				.filter(calculadora -> calculadora.aceitar(origem, destino))
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Nenhuma regra de frete encontrada"));
 	}
 }

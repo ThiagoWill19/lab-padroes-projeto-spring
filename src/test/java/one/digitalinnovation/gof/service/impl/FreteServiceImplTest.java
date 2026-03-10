@@ -3,9 +3,11 @@ package one.digitalinnovation.gof.service.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -13,6 +15,9 @@ import one.digitalinnovation.gof.model.Endereco;
 import one.digitalinnovation.gof.model.dto.FreteRequestDto;
 import one.digitalinnovation.gof.model.dto.FreteResponseDto;
 import one.digitalinnovation.gof.service.ViaCepService;
+import one.digitalinnovation.gof.service.strategy.FreteMesmaCidadeStrategy;
+import one.digitalinnovation.gof.service.strategy.FreteMesmoEstadoStrategy;
+import one.digitalinnovation.gof.service.strategy.FreteOutroEstadoStrategy;
 
 @ExtendWith(MockitoExtension.class)
 class FreteServiceImplTest {
@@ -20,8 +25,17 @@ class FreteServiceImplTest {
 	@Mock
 	private ViaCepService viaCepService;
 
-	@InjectMocks
 	private FreteServiceImpl freteService;
+
+	@BeforeEach
+	void setUp() {
+		freteService = new FreteServiceImpl(
+				viaCepService,
+				List.of(
+						new FreteMesmaCidadeStrategy(),
+						new FreteMesmoEstadoStrategy(),
+						new FreteOutroEstadoStrategy()));
+	}
 
 	@Test
 	void deveCalcularFreteParaMesmaCidade() {
